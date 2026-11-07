@@ -29,7 +29,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;padding:25px}
 </style>
 </head>
 <body>
-<header><div class="top"><div class="brand"><div class="mark">F1</div><div><div class="eyebrow">PADDOCK INTELLIGENCE</div><h1>TRANSFER GENERATOR</h1></div></div><div class="season" id="seasonLabel">2026 TRANSFER WINDOW · WEEK 1</div></div></header>
+<header><div class="top"><div class="brand"><div class="mark">F1</div><div><div class="eyebrow">PADDOCK INTELLIGENCE</div><h1>TRANSFER GENERATOR</h1></div></div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end"><div class="season" id="seasonLabel">2026 TRANSFER WINDOW · WEEK 1</div><button id="newSeasonBtn" class="primary" style="display:none" onclick="startNewSeason()">Start New Season</button></div></div></header>
 <main>
 <div class="toolbar">
   <button class="primary" id="advanceBtn">▶ Advance 1 week</button>
@@ -220,8 +220,11 @@ function activeDrivers(){return state.drivers.filter(d=>d.status!=="Retired")}
 function pushNews(type,headline,body){state.news.unshift({id:uid(),week:state.week,type,headline,body});state.news=state.news.slice(0,100)}
 function setTab(tab){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));render(tab)}
 document.getElementById("tabs").addEventListener("click",e=>{let b=e.target.closest("[data-tab]");if(b)setTab(b.dataset.tab)});
+function hasFutureScheduledRounds(){const recorded=new Set((state.raceResults||[]).filter(r=>Number(r.season)===Number(state.season)).map(r=>Number(r.round)));return (state.schedule||[]).some(r=>!recorded.has(Number(r.round)))}
+function startNewSeason(){if(hasFutureScheduledRounds())return;const next=Number(state.season)+1;if(!confirm(`Start the ${next} season? The current schedule and results will be archived, and the new season will begin with an empty schedule. All drivers and team assignments will remain unchanged.`))return;state.scheduleHistory=state.scheduleHistory||{};state.scheduleHistory[state.season]=(state.schedule||[]).map(r=>({...r}));state.schedule=[];state.season=next;state.week=1;pushNews("talks",`The ${next} season begins`,"A new season is underway. Driver assignments have been retained.");save();setTab("schedule")}
 function render(tab="overview"){
  document.getElementById("seasonLabel").textContent=`${state.season} TRANSFER WINDOW · WEEK ${state.week}`;
+ document.getElementById("newSeasonBtn").style.display=hasFutureScheduledRounds()?"none":"";
  const v=document.getElementById("view");
  if(tab==="overview")v.innerHTML=overview();
  if(tab==="market")v.innerHTML=market();
@@ -358,7 +361,7 @@ function generateRumour(){
  save();render("news")
 }
 function transfer(d,t,why){let old=d.team;d.team=t.name;d.status="Contracted";d.expiry=state.season+1+Math.floor(Math.random()*3);pushNews("confirmed",`${d.name} joins ${t.name}`,`${d.name} has agreed a contract through ${d.expiry}. ${old&&old!=="Free Agent"?`The move sees the driver leave ${old}. `:""}${why||"The team believes the signing strengthens its lineup."}`);state.history.push({driver:d.name,from:old,to:t.name,season:state.season,week:state.week})}
-function advanceWeek(){state.week++;if(state.week>12){state.week=1;state.season++;pushNews("talks",`The ${state.season} season begins`,"A new season is underway. All driver assignments have been retained.");}if(Math.random()<.75)generateRumourSilent();save();render("overview")}
+function advanceWeek(){state.week++;if(Math.random()<.75)generateRumourSilent();save();render("overview")}
 function generateRumourSilent(){let free=state.drivers.filter(d=>["Free Agent","Reserve","F2 Prospect"].includes(d.status)),teams=state.teams.filter(t=>state.drivers.filter(d=>d.status==="Contracted"&&d.team===t.name).length<2);if(!free.length||!teams.length)return;let d=choose(free),t=choose(teams);pushNews(Math.random()<.2?"talks":"rumour",`${t.name} linked with ${d.name}`,`Paddock sources suggest ${t.name} have added ${d.name} to their shortlist. The team has yet to make a formal offer.`)}
 function saveSettings(){state.season=+document.getElementById("seasonInput").value;state.week=+document.getElementById("weekInput").value;save();render("settings")}
 function exportData(){let blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`f1-transfer-generator-${state.season}-week-${state.week}.json`;a.click();URL.revokeObjectURL(a.href)}
