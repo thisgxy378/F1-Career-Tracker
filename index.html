@@ -282,6 +282,13 @@ function reconcileMarketRosterToSpreadsheet(){
 }
 applySpreadsheetMarketUpdate();
 reconcileMarketRosterToSpreadsheet();
+function removeExcludedMarketDrivers(){
+ const excluded=new Set(["franco colapinto","lance stroll"]);
+ const original=state.drivers.length;
+ state.drivers=state.drivers.filter(d=>!excluded.has(String(d.name||"").trim().toLowerCase()));
+ if(state.drivers.length!==original)save();
+}
+removeExcludedMarketDrivers();
 function nationalityFlag(code){const c=String(code||"").trim().toUpperCase();return c?'<span title="Nationality: '+esc(c)+'">'+esc(c)+'</span>':'<span title="Nationality not set">—</span>'}
 
 function marketSortHeader(label,key){let active=marketSortKey===key;return `<th scope="col" aria-sort="${active?(marketSortDirection===1?"ascending":"descending"):"none"}"><button type="button" class="market-sort" onclick="setMarketSort('${key}')" title="Sort by ${label}" aria-label="Sort by ${label}${active?(marketSortDirection===1?", ascending":", descending"):""}">${label}<span class="sort-indicator">${active?(marketSortDirection===1?"▲":"▼"):"↕"}</span></button></th>`}
