@@ -261,7 +261,7 @@ function scheduleView(){
  const races=state.schedule.slice().sort((a,b)=>a.round-b.round);
  return `<div class="grid"><div class="card span-5"><h2>Season schedule</h2><p class="muted small">Build your calendar in round order. Select a scheduled race on the Race results tab to fill in its round and circuit automatically.</p>
  <div class="field"><label>Round</label><input id="scheduleRound" type="number" min="1" step="1" value="${races.length?Math.max(...races.map(x=>x.round))+1:1}"></div>
- <div class="field" style="margin-top:10px"><label>Circuit</label><input id="scheduleCircuit" placeholder="e.g. Albert Park" autocomplete="off"></div>
+ <div class="field" style="margin-top:10px"><label>Circuit</label><input id="scheduleCircuit" placeholder="e.g. Albert Park" autocomplete="off" onkeydown="if(event.key==='Enter' && !event.isComposing){event.preventDefault();saveScheduleRound()}"></div>
  <button class="primary" style="width:100%;margin-top:14px" onclick="saveScheduleRound()">Add / update round</button>
  <p class="muted small" style="margin-top:10px">To edit a round, click Edit in the calendar, change the fields and save. Rounds are unique.</p></div>
  <div class="card span-7"><div class="sectionhead"><h2>Calendar</h2><span class="pill">${races.length} rounds</span></div>
