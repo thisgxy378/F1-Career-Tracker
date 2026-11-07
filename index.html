@@ -227,7 +227,6 @@ document.getElementById("tabs").addEventListener("click",e=>{let b=e.target.clos
 function hasFutureScheduledRounds(){const recorded=new Set((state.raceResults||[]).filter(r=>Number(r.season)===Number(state.season)).map(r=>Number(r.round)));return (state.schedule||[]).some(r=>!recorded.has(Number(r.round)))}
 function seasonName(year){return "Season "+(Number(year)-2025)}
 function startNewSeason(){if(hasFutureScheduledRounds())return;const next=Number(state.season)+1;if(!confirm(`Start ${seasonName(next)}? The current schedule and results will be archived, and the new season will begin with an empty schedule. All drivers and team assignments will remain unchanged.`))return;migrateCircuitHistory();state.scheduleHistory=state.scheduleHistory||{};state.scheduleHistory[state.season]=(state.schedule||[]).map(r=>({...r}));state.seasonSnapshots=state.seasonSnapshots||{};state.seasonSnapshots[state.season]={drivers:structuredClone(state.drivers),teams:structuredClone(state.teams),schedule:structuredClone(state.schedule||[]),raceResults:structuredClone((state.raceResults||[]).filter(r=>Number(r.season)===Number(state.season))),performance:structuredClone(state.performance||{}),news:structuredClone(state.news||[]),history:structuredClone(state.history||[]),week:state.week};state.schedule=[];state.season=next;state.week=1;pushNews("talks",`${seasonName(next)} begins`,"A new season is underway. Driver assignments have been retained.");save();setTab("schedule")}
-applySpreadsheetMarketUpdate();
 function render(tab="overview"){
  document.getElementById("seasonLabel").textContent=`${seasonName(state.season).toUpperCase()} TRANSFER WINDOW · WEEK ${state.week}`;
  document.getElementById("newSeasonBtn").style.display=hasFutureScheduledRounds()?"none":"";
@@ -280,6 +279,7 @@ function reconcileMarketRosterToSpreadsheet(){
  // Historical results and season snapshots retain their original data.
  if(save())localStorage.setItem(revision,"1");
 }
+applySpreadsheetMarketUpdate();
 reconcileMarketRosterToSpreadsheet();
 function nationalityFlag(code){const c=String(code||"").trim().toUpperCase();return c?'<span title="Nationality: '+esc(c)+'">'+esc(c)+'</span>':'<span title="Nationality not set">—</span>'}
 
