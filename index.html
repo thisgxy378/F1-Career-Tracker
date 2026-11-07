@@ -270,9 +270,12 @@ function performanceLeaders(){let ds=state.drivers.filter(d=>perf(d).starts).sor
 // Season schedule: saved with the simulator database and JSON backups.
 function scheduleView(){
  const races=state.schedule.slice().sort((a,b)=>a.round-b.round);
+ migrateCircuitHistory();
+ const previousCircuits=[...new Map((state.circuitHistory||[]).map(c=>[String(c.name||"").trim().toLocaleLowerCase(),String(c.name||"").trim()]).filter(([key])=>key)).values()].sort((a,b)=>a.localeCompare(b));
  return `<div class="grid"><div class="card span-5"><h2>Season Schedule</h2><p class="muted small">Build your calendar in round order. Select a scheduled race on the Race results tab to fill in its round and circuit automatically.</p>
  <div class="field"><label>Round</label><input id="scheduleRound" type="number" min="1" step="1" value="${races.length?Math.max(...races.map(x=>x.round))+1:1}"></div>
- <div class="field" style="margin-top:10px"><label>Circuit</label><input id="scheduleCircuit" placeholder="e.g. Albert Park" autocomplete="off" onkeydown="if(event.key==='Enter' && !event.isComposing){event.preventDefault();saveScheduleRound()}"></div>
+ ${previousCircuits.length?`<div class="field" style="margin-top:10px"><label>Select a previously added circuit</label><select id="previousCircuit" onchange="selectPreviousCircuit()" style="width:100%"><option value="">Choose a circuit…</option>${previousCircuits.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div>`:""}
+ <div class="field" style="margin-top:10px"><label>Circuit (or enter a new one)</label><input id="scheduleCircuit" placeholder="e.g. Albert Park" autocomplete="off" onkeydown="if(event.key==='Enter' && !event.isComposing){event.preventDefault();saveScheduleRound()}"></div>
  <button class="primary" style="width:100%;margin-top:14px" onclick="saveScheduleRound()">Add / update round</button>
  <p class="muted small" style="margin-top:10px">To edit a round, click Edit in the calendar, change the fields and save. Rounds are unique.</p></div>
  <div class="card span-7"><div class="sectionhead"><h2>Calendar</h2><span class="pill">${races.length} rounds</span></div>
@@ -280,6 +283,7 @@ function scheduleView(){
 }
 function recordCircuitHistory(circuit,season,round){const name=String(circuit||"").trim();if(!name)return;state.circuitHistory=state.circuitHistory||[];const key=name.toLocaleLowerCase();let item=state.circuitHistory.find(c=>String(c.name).toLocaleLowerCase()===key);if(!item){item={name,firstSeason:Number(season),appearances:[]};state.circuitHistory.push(item)}if(!Array.isArray(item.appearances))item.appearances=[];if(!item.appearances.some(a=>Number(a.season)===Number(season)&&Number(a.round)===Number(round)))item.appearances.push({season:Number(season),round:Number(round)});item.firstSeason=Math.min(Number(item.firstSeason)||Number(season),Number(season));}
 function migrateCircuitHistory(){state.circuitHistory=state.circuitHistory||[];for(const r of state.schedule||[])recordCircuitHistory(r.circuit,state.season,r.round);for(const [year,rounds] of Object.entries(state.scheduleHistory||{}))for(const r of rounds||[])recordCircuitHistory(r.circuit,year,r.round);for(const [year,snap] of Object.entries(state.seasonSnapshots||{}))for(const r of snap.schedule||[])recordCircuitHistory(r.circuit,year,r.round);for(const r of state.raceResults||[])recordCircuitHistory(r.circuit||r.name,r.season||state.season,r.round);}
+function selectPreviousCircuit(){const selected=document.getElementById("previousCircuit")?.value;if(selected){const field=document.getElementById("scheduleCircuit");if(field)field.value=selected}}
 function saveScheduleRound(){
  const round=Number(document.getElementById("scheduleRound").value),circuit=document.getElementById("scheduleCircuit").value.trim();
  if(!Number.isInteger(round)||round<1||round>99){alert("Enter a round number between 1 and 99.");return}
