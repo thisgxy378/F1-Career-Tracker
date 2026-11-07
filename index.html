@@ -502,18 +502,28 @@ function teamInterestView(){
   if(!vacancy&&!struggling.length)return null;
   const incumbent=struggling[0],security=incumbent?seatSecurity(incumbent):null;
   const ranked=available.filter(d=>d.team!==t.name).map(d=>{
-   const rating=Number(d.rating)||65,age=Number(d.age)||28;
+   const rating=Math.max(0,Math.min(100,Number(d.rating)||65));
+   const age=Number(d.age)||28,experience=Math.max(0,Math.min(100,Number(d.experience)||0));
    const target=teamTarget(t);
    const ideal=target==="Contender"?88:target==="Midfield"?79:target==="Points Challenge"?73:70;
-   const performanceFit=Math.max(0,30-Math.abs(rating-ideal)*1.5);
-   const experience=Number(d.experience)||0;
-   const contractPenalty=d.status==="Contracted"?(Number(d.expiry)>Number(state.season)+1?10:4):0;
-   const fit=performanceFit+rating*.45+Math.min(15,experience*.12)+(age<=25?5:age>=36?-3:2)-contractPenalty;
+   // Base model: rating 25%, age/potential 25%, experience 15%, team fit 20%, availability 15%.
+   const ratingScore=rating/100*25;
+   const potentialScore=Math.max(0,Math.min(100,age<=20?85:age<=23?95:age<=26?85:age<=29?70:age<=32?55:age<=35?40:25));
+   const ageScore=potentialScore/100*25;
+   const experienceScore=experience/100*15;
+   const fitScore=Math.max(0,100-Math.abs(rating-ideal)*3)/100*20;
+   const availabilityScore=(d.status==="Contracted"?(Number(d.expiry)>Number(state.season)+1?35:65):100)/100*15;
+   // Race performance is optional: drivers without three assessed races receive no adjustment.
+   const p=perf(d),starts=Number(p?.starts)||0;
+   const performanceAdjustment=starts>=3?Math.max(-10,Math.min(10,(Number(p.score)||0)/3)):0;
+   // Contenders favour experience; developing teams favour youth, without excluding either.
+   const teamAdjustment=target==="Contender"?(experience/100*4-potentialScore/100*2):target==="Points Challenge"||target==="Other"?(potentialScore/100*4-experience/100*2):0;
+   const fit=ratingScore+ageScore+experienceScore+fitScore+availabilityScore+performanceAdjustment+teamAdjustment;
    return {d,fit}
   }).sort((a,b)=>b.fit-a.fit||a.d.name.localeCompare(b.d.name)).slice(0,5);
   return {t,incumbent,security,vacancy,ranked}
  }).filter(Boolean);
- return '<div class="card"><div class="sectionhead"><h2>Team Interest & Replacement Shortlists</h2><span class="pill">'+targets.length+' teams monitoring options</span></div><p class="muted small">Teams with a vacant seat or a driver below 50 seat security after at least three assessed races monitor potential replacements. Shortlists include free agents and drivers contracted to other teams, ranked by rating, experience, age, contract status and team competitiveness. These are scouting projections, not confirmed negotiations; no transfers are made automatically.</p>'+
+ return '<div class="card"><div class="sectionhead"><h2>Team Interest & Replacement Shortlists</h2><span class="pill">'+targets.length+' teams monitoring options</span></div><p class="muted small">Teams with a vacant seat or a driver below 50 seat security after at least three assessed races monitor potential replacements. Shortlists include free agents and drivers contracted to other teams, ranked by rating (25%), age and potential (25%), experience (15%), team fit (20%) and availability (15%). Recorded performance adjusts the score by up to ±10 only after three assessed races; drivers without results receive no penalty. These are scouting projections, not confirmed negotiations; no transfers are made automatically.</p>'+
  (targets.length?targets.map(x=>'<div style="margin:20px 0 26px"><h3>'+esc(x.t.name)+'</h3><p class="muted small">'+(x.vacancy?x.vacancy+' vacant seat'+(x.vacancy===1?'':'s')+'. ':'')+(x.incumbent?'Considering alternatives to '+esc(x.incumbent.name)+' (Seat Security: '+x.security.security+'/100, '+x.security.label+').':'')+'</p>'+(x.ranked.length?'<div style="overflow:auto"><table><thead><tr><th>Priority</th><th>Potential target</th><th>Status</th><th>Rating</th><th>Age</th><th>Suitability</th></tr></thead><tbody>'+x.ranked.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><b>'+esc(r.d.name)+'</b></td><td>'+esc(r.d.status)+'</td><td>'+Number(r.d.rating||0)+'</td><td>'+Number(r.d.age||0)+'</td><td>'+Math.round(r.fit)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted small">No eligible drivers to scout.</p>')+'</div>').join(''):'<div class="empty">No teams are currently looking for replacements. Shortlists will appear when a seat becomes vacant or a driver’s seat security falls below 50 after three assessed races.</div>')+'</div>';
 }
 function isLegacyRacePerformanceNews(n){
